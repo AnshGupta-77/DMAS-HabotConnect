@@ -62,3 +62,12 @@ Visibility: admin sees all; creator sees own; reviewer sees all non-draft docume
 ### `GET /api/documents/{id}/download/`
 - Auth: required, same object-access rules as retrieve
 - 200: file stream (`FileResponse`), never a filesystem path in the JSON body
+
+## Notifications
+
+### `GET /api/notifications/`
+- Auth: required; own notifications only, paginated, newest first
+
+### `PATCH /api/notifications/{id}/read/`
+- Auth: required, own notification only
+- 200: marks read; 404 if the notification belongs to another user (no ID leak)
