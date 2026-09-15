@@ -103,3 +103,18 @@ All five endpoints: 400 on illegal transition or missing reason/comment,
 403 on wrong role, 404 if the document is outside the caller's visible
 queryset. Each runs inside `transaction.atomic()` with
 `select_for_update()` on the document row.
+
+## Comments
+
+### `POST /api/documents/{id}/comments/`
+- Auth: required, same object-access rules as the document
+- Body: `comment` (required, non-blank); `user` is always the requester, never the payload
+- 400 empty/whitespace, 404 if the document is outside the caller's visible set
+
+### `GET /api/documents/{id}/comments/`
+- Auth: required, same object-access rules; paginated
+
+## Activity
+
+### `GET /api/documents/{id}/activity/`
+- Auth: required, same object-access rules; paginated, newest first

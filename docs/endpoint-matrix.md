@@ -23,3 +23,6 @@ Columns: Endpoint | Method | Auth | Roles | Object Access | Valid Input | Invali
 | /api/documents/{id}/approve/ | POST | required | reviewer, admin | 404 outside scope | ok | draft/approved/rejected target | 200 | 400/403/404 | creator self-approve blocked | select_for_update | test_workflow.py | API.md | phase5 |
 | /api/documents/{id}/reject/ | POST | required | reviewer, admin | 404 outside scope | ok | empty/whitespace reason | 200 | 400/403/404 | creator blocked, reason required | select_for_update | test_workflow.py | API.md | phase5 |
 | /api/documents/{id}/request-changes/ | POST | required | reviewer, admin | 404 outside scope | ok | empty comment | 200 | 400/403/404 | comment required | select_for_update | test_workflow.py | API.md | phase5 |
+| /api/documents/{id}/comments/ | POST | required | any with doc access | 404 outside scope | ok | empty/whitespace | 201 | 400/404 | impersonation ignored | n/a | test_comments_activity.py | API.md | phase6 |
+| /api/documents/{id}/comments/ | GET | required | any with doc access | 404 outside scope | ok | n/a | 200 | 404 | n/a | paginated | test_comments_activity.py | API.md | phase6 |
+| /api/documents/{id}/activity/ | GET | required | any with doc access | 404 outside scope | ok | n/a | 200 | 404 | n/a | select_related, paginated | test_comments_activity.py | API.md | phase6 |

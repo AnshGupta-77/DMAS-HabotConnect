@@ -1,6 +1,6 @@
 from django.http import FileResponse
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import filters, mixins, permissions, viewsets
+from rest_framework import filters, mixins, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
@@ -10,10 +10,11 @@ from users.models import User
 from .filters import DocumentFilterSet
 from .models import ActivityLog, Document
 from .permissions import DocumentObjectPermission
-from .serializers import DocumentSerializer
+from .serializers import ActivityLogSerializer, CommentSerializer, DocumentSerializer
 from .services import apply_transition, log_activity
 
 WORKFLOW_ACTIONS = {"submit", "review", "approve", "reject", "request_changes"}
+NESTED_READ_ACTIONS = {"comments", "activity"}
 
 
 class DocumentViewSet(
@@ -34,7 +35,7 @@ class DocumentViewSet(
     ordering = ["-created_at"]
 
     def get_permissions(self):
-        if self.action in WORKFLOW_ACTIONS:
+        if self.action in WORKFLOW_ACTIONS or self.action in NESTED_READ_ACTIONS:
             return [permissions.IsAuthenticated()]
         return super().get_permissions()
 
@@ -123,3 +124,31 @@ class DocumentViewSet(
     @action(detail=True, methods=["post"], url_path="request-changes")
     def request_changes(self, request, pk=None):
         return self._run_transition(request, "request_changes", comment_field="comment")
+
+    @action(detail=True, methods=["get", "post"])
+    def comments(self, request, pk=None):
+        document = self.get_object()
+        if request.method == "POST":
+            serializer = CommentSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            serializer.save(document=document, user=request.user)
+            log_activity(
+                document=document,
+                user=request.user,
+                action=ActivityLog.Action.COMMENT_ADDED,
+                description="Comment added.",
+            )
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        queryset = document.comments.select_related("user")
+        page = self.paginate_queryset(queryset)
+        serializer = CommentSerializer(page, many=True)
+        return self.get_paginated_response(serializer.data)
+
+    @action(detail=True, methods=["get"])
+    def activity(self, request, pk=None):
+        document = self.get_object()
+        queryset = document.activity_logs.select_related("user")
+        page = self.paginate_queryset(queryset)
+        serializer = ActivityLogSerializer(page, many=True)
+        return self.get_paginated_response(serializer.data)
