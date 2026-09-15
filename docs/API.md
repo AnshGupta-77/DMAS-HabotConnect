@@ -8,7 +8,7 @@ Base path: `/api/`. All protected endpoints require `Authorization: Bearer <acce
 - Auth: none
 - Body: `username`, `email`, `password`, `role` (`creator` | `reviewer` — `admin` is rejected; use `createsuperuser`)
 - 201: `{id, username, email, role}`
-- 400: validation errors (duplicate username/email, weak password, invalid role)
+- 400: validation errors (duplicate username, weak password, invalid role). Username is the account identity; email is not required to be unique.
 
 ### `POST /api/auth/login/`
 - Auth: none
@@ -53,11 +53,14 @@ Visibility: admin sees all; creator sees own; reviewer sees all non-draft docume
 ### `PATCH /api/documents/{id}/`
 - Auth: required, owner or admin, only while `draft`/`changes_requested`
 - `status`, `created_by`, `current_version` are read-only (ignored if sent)
+- Editing a `changes_requested` document returns it to `draft`, so it can be resubmitted
+- `file` is ignored here; replace files through `POST versions/`
 - 403 if not owner/admin or status not editable
 
 ### `DELETE /api/documents/{id}/`
 - Auth: required. Admin: any document. Creator: own drafts only.
 - 204 on success; `document_deleted` activity recorded with `document=null`
+- Stored document and version files are deleted only after the database delete commits
 
 ### `GET /api/documents/{id}/download/`
 - Auth: required, same object-access rules as retrieve
@@ -99,7 +102,7 @@ State machine: `draft → submitted → under_review → approved`, with
 - Body: `comment` (required, non-blank) — stored as a `Comment`
 - Notifies the creator
 
-All five endpoints: 400 on illegal transition or missing reason/comment,
+All five endpoints: 400 on illegal transition or missing/non-string reason/comment,
 403 on wrong role, 404 if the document is outside the caller's visible
 queryset. Each runs inside `transaction.atomic()` with
 `select_for_update()` on the document row.
@@ -132,7 +135,7 @@ queryset. Each runs inside `transaction.atomic()` with
 - Auth: same as document access; paginated
 
 ### `GET /api/documents/{id}/versions/{version_id}/`
-- Auth: same as document access; 404 if the version does not belong to `{id}`
+- Auth: same as document access; 404 if the version does not belong to `{id}` or `version_id` is not numeric
 
 ### `GET /api/documents/{id}/versions/{version_id}/download/`
 - Auth: same as document access; `FileResponse`, no filesystem path in the JSON body

@@ -2,14 +2,8 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from django.urls import reverse
 from rest_framework import serializers
 
-from .models import ActivityLog, Category, Comment, Document, DocumentVersion
+from .models import ActivityLog, Comment, Document, DocumentVersion
 from .validators import validate_document_file
-
-
-class CategorySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Category
-        fields = ["id", "name"]
 
 
 class DocumentSerializer(serializers.ModelSerializer):
@@ -99,13 +93,6 @@ class DocumentVersionSerializer(serializers.ModelSerializer):
             "document-version-download", kwargs={"pk": obj.document_id, "version_id": obj.id}
         )
         return request.build_absolute_uri(url) if request else url
-
-    def validate_file(self, value):
-        try:
-            validate_document_file(value)
-        except DjangoValidationError as exc:
-            raise serializers.ValidationError(exc.messages) from exc
-        return value
 
 
 class ActivityLogSerializer(serializers.ModelSerializer):

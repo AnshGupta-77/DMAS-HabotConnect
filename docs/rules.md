@@ -898,6 +898,8 @@ Correct authorization.
 
 Validation must not depend exclusively on frontend behavior.
 
+Malformed input must never produce a 500. Payload fields read directly from request data must be type-checked (a non-string reason/comment returns 400), and URL path parameters must be constrained to their expected format (a non-numeric ID returns 404).
+
 21. Security Testing Rules
 
 Every endpoint must be security-tested before the feature is considered complete.
@@ -1079,6 +1081,8 @@ Creating a version and updating current-version information.
 If these operations must succeed together, use an appropriate database transaction.
 
 Do not leave the database in a partially updated state when a related required operation fails.
+
+Irreversible side effects outside the database, such as deleting stored files, must run only after the transaction commits (for example with transaction.on_commit()), so a rolled-back operation never leaves records pointing at missing files.
 
 25. Concurrency Rules
 

@@ -1,3 +1,4 @@
+from django.db import transaction
 from django.http import FileResponse
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, mixins, permissions, status, viewsets
@@ -53,6 +54,7 @@ class DocumentViewSet(
             return qs.filter(created_by=user)
         return qs.exclude(status=Document.Status.DRAFT)
 
+    @transaction.atomic
     def perform_create(self, serializer):
         document = serializer.save(created_by=self.request.user, status=Document.Status.DRAFT)
         document.versions.create(
@@ -65,11 +67,13 @@ class DocumentViewSet(
             description=f"Document '{document.title}' created.",
         )
 
+    @transaction.atomic
     def perform_update(self, serializer):
-        instance = self.get_object()
-        if instance.status not in (Document.Status.DRAFT, Document.Status.CHANGES_REQUESTED):
+        locked = Document.objects.select_for_update().get(pk=serializer.instance.pk)
+        if locked.status not in (Document.Status.DRAFT, Document.Status.CHANGES_REQUESTED):
             raise PermissionDenied("Document cannot be edited in its current status.")
-        document = serializer.save()
+        serializer.instance = locked
+        document = serializer.save(status=Document.Status.DRAFT)
         log_activity(
             document=document,
             user=self.request.user,
@@ -77,14 +81,14 @@ class DocumentViewSet(
             description=f"Document '{document.title}' updated.",
         )
 
+    @transaction.atomic
     def perform_destroy(self, instance):
         user = self.request.user
         if user.role != User.Role.ADMIN and instance.status != Document.Status.DRAFT:
             raise PermissionDenied("Only draft documents can be deleted.")
         title, doc_id = instance.title, instance.id
-        instance.file.delete(save=False)
-        for version in instance.versions.all():
-            version.file.delete(save=False)
+        storage = instance.file.storage
+        file_names = [instance.file.name, *instance.versions.values_list("file", flat=True)]
         instance.delete()
         log_activity(
             document=None,
@@ -92,6 +96,8 @@ class DocumentViewSet(
             action=ActivityLog.Action.DELETED,
             description=f"Document #{doc_id} '{title}' deleted.",
         )
+        # Files are removed only once the DB delete is committed, so a rollback never orphans rows.
+        transaction.on_commit(lambda: [storage.delete(name) for name in set(file_names) if name])
 
     @action(detail=True, methods=["get"])
     def download(self, request, pk=None):
@@ -105,6 +111,8 @@ class DocumentViewSet(
     def _run_transition(self, request, action_name, comment_field=None):
         document = self.get_object()
         comment_text = request.data.get(comment_field, "") if comment_field else ""
+        if not isinstance(comment_text, str):
+            raise ValidationError({comment_field: "Must be a string."})
         document = apply_transition(
             action_name=action_name, document_id=document.id, user=request.user, comment_text=comment_text
         )
@@ -136,13 +144,14 @@ class DocumentViewSet(
         if request.method == "POST":
             serializer = CommentSerializer(data=request.data)
             serializer.is_valid(raise_exception=True)
-            serializer.save(document=document, user=request.user)
-            log_activity(
-                document=document,
-                user=request.user,
-                action=ActivityLog.Action.COMMENT_ADDED,
-                description="Comment added.",
-            )
+            with transaction.atomic():
+                serializer.save(document=document, user=request.user)
+                log_activity(
+                    document=document,
+                    user=request.user,
+                    action=ActivityLog.Action.COMMENT_ADDED,
+                    description="Comment added.",
+                )
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         queryset = document.comments.select_related("user")
@@ -178,7 +187,7 @@ class DocumentViewSet(
         serializer = DocumentVersionSerializer(page, many=True, context={"request": request})
         return self.get_paginated_response(serializer.data)
 
-    @action(detail=True, methods=["get"], url_path=r"versions/(?P<version_id>[^/.]+)")
+    @action(detail=True, methods=["get"], url_path=r"versions/(?P<version_id>\d+)")
     def version_detail(self, request, pk=None, version_id=None):
         document = self.get_object()
         version = document.versions.select_related("created_by").filter(id=version_id).first()
@@ -189,7 +198,7 @@ class DocumentViewSet(
     @action(
         detail=True,
         methods=["get"],
-        url_path=r"versions/(?P<version_id>[^/.]+)/download",
+        url_path=r"versions/(?P<version_id>\d+)/download",
         url_name="version-download",
     )
     def version_download(self, request, pk=None, version_id=None):

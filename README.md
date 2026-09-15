@@ -37,7 +37,7 @@ python manage.py runserver
 ## Testing
 
 ```bash
-python manage.py test        # 83 tests
+python manage.py test        # 89 tests
 python manage.py makemigrations --check --dry-run
 ```
 
@@ -47,15 +47,17 @@ validation, ownership, object-level 404s), search/filter/pagination,
 notifications (data isolation / IDOR), the full workflow state machine
 (role checks, illegal transitions, required reason/comment), comments,
 activity log, versions (numbering, blocked-while-under-review,
-parent-document scoping), the dashboard aggregate, and two end-to-end
+parent-document scoping), the dashboard aggregate, two end-to-end
 tests replicating the brief's 13-step flow (success path + unauthorized
-branches).
+branches), and audit regressions (`documents/tests/test_audit_regressions.py`:
+edit-after-changes-requested returns to draft, malformed IDs/payload types
+return 404/400 instead of 500, delete removes files only after commit).
 
 ## Architecture
 
 ```
 config/       settings, urls, custom exception handler, pagination class
-users/        custom User (role field), JWT auth views, role permission classes
+users/        custom User (role field), JWT auth views
 documents/    Category, Document, DocumentVersion, Comment, ActivityLog;
               validators (extension/size/magic-byte), storage (UUID upload
               paths), services (workflow state machine, versioning,
@@ -101,9 +103,12 @@ notification triggers.
   (`%PDF-`, OLE2 header for doc/xls, zip+`PK` header for docx/xlsx, UTF-8/no
   null bytes for txt) so a renamed `.exe` is rejected even with a `.pdf` name.
   Storage paths are UUID-based; original filenames are discarded.
-- Every workflow/version-creating operation runs in `transaction.atomic()`
-  with `select_for_update()` on the document row, so concurrent
-  approve/reject/version requests can't race past the status check.
+- Every workflow/version-creating operation and every document edit runs in
+  `transaction.atomic()` with `select_for_update()` on the document row, so
+  concurrent approve/reject/version/edit requests can't race past the status
+  check. Document create (document + v1 + activity), comment create (comment +
+  activity) and delete (row + activity) are also atomic; stored files are
+  removed only after the delete commits.
 - Querysets are pre-scoped by role before any object lookup, so requesting
   another user's document/notification/version by ID returns 404, not 403
   (no existence leak).
