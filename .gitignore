@@ -1,0 +1,18 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+media/
+staticfiles/
+db.sqlite3
+*.log
+.DS_Store
+
+# AI tooling — keep out of submission history
+.claude/
+CLAUDE.md
+*.claude.md
+.cursor/
+.cursorrules
+.windsurfrules
+.aider*
