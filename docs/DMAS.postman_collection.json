@@ -1,0 +1,308 @@
+{
+  "info": {
+    "name": "DMAS",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8000/api" },
+    { "key": "access", "value": "" },
+    { "key": "refresh", "value": "" },
+    { "key": "document_id", "value": "" },
+    { "key": "version_id", "value": "" },
+    { "key": "notification_id", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/auth/register/",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "username", "value": "creator1" },
+                { "key": "email", "value": "creator1@example.com" },
+                { "key": "password", "value": "StrongPass123" },
+                { "key": "role", "value": "creator" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/auth/login/",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "username", "value": "creator1" },
+                { "key": "password", "value": "StrongPass123" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Refresh",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/auth/login/refresh/",
+            "body": { "mode": "urlencoded", "urlencoded": [{ "key": "refresh", "value": "{{refresh}}" }] }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/auth/logout/",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access}}" }],
+            "body": { "mode": "urlencoded", "urlencoded": [{ "key": "refresh", "value": "{{refresh}}" }] }
+          }
+        },
+        {
+          "name": "Profile",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/auth/profile/",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Documents",
+      "item": [
+        {
+          "name": "Create",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/documents/",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access}}" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "title", "value": "Project Proposal" },
+                { "key": "description", "value": "Initial draft" },
+                { "key": "category", "value": "1" },
+                { "key": "file", "type": "file", "src": "" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "List",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/documents/?status=draft&category=HR&search=policy",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access}}" }]
+          }
+        },
+        {
+          "name": "Retrieve",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/documents/{{document_id}}/",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access}}" }]
+          }
+        },
+        {
+          "name": "Update",
+          "request": {
+            "method": "PATCH",
+            "url": "{{base_url}}/documents/{{document_id}}/",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"title\": \"Updated title\"}" }
+          }
+        },
+        {
+          "name": "Delete",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/documents/{{document_id}}/",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access}}" }]
+          }
+        },
+        {
+          "name": "Download",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/documents/{{document_id}}/download/",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Workflow",
+      "item": [
+        {
+          "name": "Submit",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/documents/{{document_id}}/submit/",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access}}" }]
+          }
+        },
+        {
+          "name": "Review",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/documents/{{document_id}}/review/",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access}}" }]
+          }
+        },
+        {
+          "name": "Approve",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/documents/{{document_id}}/approve/",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access}}" }]
+          }
+        },
+        {
+          "name": "Reject",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/documents/{{document_id}}/reject/",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access}}" }],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [{ "key": "reason", "value": "Please update the project description." }]
+            }
+          }
+        },
+        {
+          "name": "Request Changes",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/documents/{{document_id}}/request-changes/",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access}}" }],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [{ "key": "comment", "value": "Please update the budget section." }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Comments",
+      "item": [
+        {
+          "name": "Add Comment",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/documents/{{document_id}}/comments/",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access}}" }],
+            "body": { "mode": "urlencoded", "urlencoded": [{ "key": "comment", "value": "Please update the budget section." }] }
+          }
+        },
+        {
+          "name": "List Comments",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/documents/{{document_id}}/comments/",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Versions",
+      "item": [
+        {
+          "name": "Create Version",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/documents/{{document_id}}/versions/",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access}}" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "file", "type": "file", "src": "" },
+                { "key": "comment", "value": "Updated content" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Versions",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/documents/{{document_id}}/versions/",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access}}" }]
+          }
+        },
+        {
+          "name": "Retrieve Version",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/documents/{{document_id}}/versions/{{version_id}}/",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access}}" }]
+          }
+        },
+        {
+          "name": "Download Version",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/documents/{{document_id}}/versions/{{version_id}}/download/",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Activity",
+      "item": [
+        {
+          "name": "List Activity",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/documents/{{document_id}}/activity/",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "item": [
+        {
+          "name": "List",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/notifications/",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access}}" }]
+          }
+        },
+        {
+          "name": "Mark Read",
+          "request": {
+            "method": "PATCH",
+            "url": "{{base_url}}/notifications/{{notification_id}}/read/",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "item": [
+        {
+          "name": "Summary",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/dashboard/",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access}}" }]
+          }
+        }
+      ]
+    }
+  ]
+}
