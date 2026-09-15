@@ -31,3 +31,32 @@ Base path: `/api/`. All protected endpoints require `Authorization: Bearer <acce
 ### `GET /api/auth/profile/`
 - Auth: required
 - 200: `{id, username, email, role}`
+
+## Documents
+
+Visibility: admin sees all; creator sees own; reviewer sees all non-draft documents.
+
+### `POST /api/documents/`
+- Auth: required, role creator or admin (reviewer forbidden)
+- Body (multipart): `title`, `description`, `category` (id), `file`
+- 201: document; creates version 1, `document_created` activity
+- 400: missing title/category/file, unsupported extension, spoofed content, oversized file
+
+### `GET /api/documents/`
+- Auth: required; paginated, role-scoped queryset
+
+### `GET /api/documents/{id}/`
+- Auth: required; 404 if outside the caller's visible set
+
+### `PATCH /api/documents/{id}/`
+- Auth: required, owner or admin, only while `draft`/`changes_requested`
+- `status`, `created_by`, `current_version` are read-only (ignored if sent)
+- 403 if not owner/admin or status not editable
+
+### `DELETE /api/documents/{id}/`
+- Auth: required. Admin: any document. Creator: own drafts only.
+- 204 on success; `document_deleted` activity recorded with `document=null`
+
+### `GET /api/documents/{id}/download/`
+- Auth: required, same object-access rules as retrieve
+- 200: file stream (`FileResponse`), never a filesystem path in the JSON body

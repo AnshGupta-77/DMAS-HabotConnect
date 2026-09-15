@@ -3,6 +3,8 @@ Django settings for the DMAS project.
 """
 
 import os
+import sys
+import tempfile
 from datetime import timedelta
 from pathlib import Path
 
@@ -109,7 +111,11 @@ STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 MEDIA_URL = "media/"
-MEDIA_ROOT = BASE_DIR / "media"
+MEDIA_ROOT = (
+    Path(tempfile.gettempdir()) / "dmas_test_media"
+    if "test" in sys.argv
+    else BASE_DIR / "media"
+)
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
