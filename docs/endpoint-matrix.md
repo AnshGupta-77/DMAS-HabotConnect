@@ -15,3 +15,4 @@ Columns: Endpoint | Method | Auth | Roles | Object Access | Valid Input | Invali
 | /api/documents/{id}/ | PATCH | required | owner, admin | 403 non-owner | ok | status field ignored | 200 | 403 | status manipulation ignored, approved-doc edit blocked | n/a | test_documents.py | API.md | phase2 |
 | /api/documents/{id}/ | DELETE | required | owner(draft), admin | 403 non-draft for creator | ok | n/a | 204 | 403 | non-owner delete blocked | n/a | test_documents.py | API.md | phase2 |
 | /api/documents/{id}/download/ | GET | required | same as retrieve | 404 outside scope | ok | n/a | 200 | 404 | IDOR on download | n/a | test_documents.py | API.md | phase2 |
+| /api/documents/?status=&category=&created_by=&search=&ordering= | GET | required | any | role-scoped | ok | invalid status | 200 | 400 | invalid enum rejected | assertNumQueries(3) constant | test_filters.py | API.md | phase3 |

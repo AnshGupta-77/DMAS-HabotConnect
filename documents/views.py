@@ -1,10 +1,12 @@
 from django.http import FileResponse
-from rest_framework import mixins, viewsets
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters, mixins, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied, ValidationError
 
 from users.models import User
 
+from .filters import DocumentFilterSet
 from .models import ActivityLog, Document
 from .permissions import DocumentObjectPermission
 from .serializers import DocumentSerializer
@@ -22,6 +24,11 @@ class DocumentViewSet(
     serializer_class = DocumentSerializer
     permission_classes = [DocumentObjectPermission]
     http_method_names = ["get", "post", "patch", "delete", "head", "options"]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_class = DocumentFilterSet
+    search_fields = ["title", "category__name", "status", "created_by__username"]
+    ordering_fields = ["created_at", "updated_at", "title", "status"]
+    ordering = ["-created_at"]
 
     def get_queryset(self):
         user = self.request.user

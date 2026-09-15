@@ -43,7 +43,9 @@ Visibility: admin sees all; creator sees own; reviewer sees all non-draft docume
 - 400: missing title/category/file, unsupported extension, spoofed content, oversized file
 
 ### `GET /api/documents/`
-- Auth: required; paginated, role-scoped queryset
+- Auth: required; paginated (`page_size`, max 100), role-scoped queryset
+- Filters: `status` (exact choice, 400 on invalid), `category` (name, case-insensitive), `created_by` (id)
+- `search=` matches title/category name/status/username; `ordering=` created_at/updated_at/title/status
 
 ### `GET /api/documents/{id}/`
 - Auth: required; 404 if outside the caller's visible set
