@@ -1,8 +1,9 @@
 from django.http import FileResponse
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import filters, mixins, viewsets
+from rest_framework import filters, mixins, permissions, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.response import Response
 
 from users.models import User
 
@@ -10,7 +11,9 @@ from .filters import DocumentFilterSet
 from .models import ActivityLog, Document
 from .permissions import DocumentObjectPermission
 from .serializers import DocumentSerializer
-from .services import log_activity
+from .services import apply_transition, log_activity
+
+WORKFLOW_ACTIONS = {"submit", "review", "approve", "reject", "request_changes"}
 
 
 class DocumentViewSet(
@@ -29,6 +32,11 @@ class DocumentViewSet(
     search_fields = ["title", "category__name", "status", "created_by__username"]
     ordering_fields = ["created_at", "updated_at", "title", "status"]
     ordering = ["-created_at"]
+
+    def get_permissions(self):
+        if self.action in WORKFLOW_ACTIONS:
+            return [permissions.IsAuthenticated()]
+        return super().get_permissions()
 
     def get_queryset(self):
         user = self.request.user
@@ -87,3 +95,31 @@ class DocumentViewSet(
         return FileResponse(
             document.file.open("rb"), as_attachment=True, filename=document.file.name.rsplit("/", 1)[-1]
         )
+
+    def _run_transition(self, request, action_name, comment_field=None):
+        document = self.get_object()
+        comment_text = request.data.get(comment_field, "") if comment_field else ""
+        document = apply_transition(
+            action_name=action_name, document_id=document.id, user=request.user, comment_text=comment_text
+        )
+        return Response(DocumentSerializer(document, context={"request": request}).data)
+
+    @action(detail=True, methods=["post"])
+    def submit(self, request, pk=None):
+        return self._run_transition(request, "submit")
+
+    @action(detail=True, methods=["post"])
+    def review(self, request, pk=None):
+        return self._run_transition(request, "review")
+
+    @action(detail=True, methods=["post"])
+    def approve(self, request, pk=None):
+        return self._run_transition(request, "approve")
+
+    @action(detail=True, methods=["post"])
+    def reject(self, request, pk=None):
+        return self._run_transition(request, "reject", comment_field="reason")
+
+    @action(detail=True, methods=["post"], url_path="request-changes")
+    def request_changes(self, request, pk=None):
+        return self._run_transition(request, "request_changes", comment_field="comment")

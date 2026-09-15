@@ -18,3 +18,8 @@ Columns: Endpoint | Method | Auth | Roles | Object Access | Valid Input | Invali
 | /api/documents/?status=&category=&created_by=&search=&ordering= | GET | required | any | role-scoped | ok | invalid status | 200 | 400 | invalid enum rejected | assertNumQueries(3) constant | test_filters.py | API.md | phase3 |
 | /api/notifications/ | GET | required | any | own only | ok | n/a | 200 | 401 | data isolation verified | paginated | test_notifications.py | API.md | phase4 |
 | /api/notifications/{id}/read/ | PATCH | required | any | own only | ok | other user's id | 200 | 404 | IDOR test | n/a | test_notifications.py | API.md | phase4 |
+| /api/documents/{id}/submit/ | POST | required | creator(owner), admin | 404 outside scope | ok | double submit | 200 | 400/403/404 | non-owner, reviewer blocked | select_for_update | test_workflow.py | API.md | phase5 |
+| /api/documents/{id}/review/ | POST | required | reviewer, admin | 404 outside scope | ok | draft target | 200 | 400/403/404 | creator blocked | select_for_update | test_workflow.py | API.md | phase5 |
+| /api/documents/{id}/approve/ | POST | required | reviewer, admin | 404 outside scope | ok | draft/approved/rejected target | 200 | 400/403/404 | creator self-approve blocked | select_for_update | test_workflow.py | API.md | phase5 |
+| /api/documents/{id}/reject/ | POST | required | reviewer, admin | 404 outside scope | ok | empty/whitespace reason | 200 | 400/403/404 | creator blocked, reason required | select_for_update | test_workflow.py | API.md | phase5 |
+| /api/documents/{id}/request-changes/ | POST | required | reviewer, admin | 404 outside scope | ok | empty comment | 200 | 400/403/404 | comment required | select_for_update | test_workflow.py | API.md | phase5 |

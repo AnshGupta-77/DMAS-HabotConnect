@@ -71,3 +71,35 @@ Visibility: admin sees all; creator sees own; reviewer sees all non-draft docume
 ### `PATCH /api/notifications/{id}/read/`
 - Auth: required, own notification only
 - 200: marks read; 404 if the notification belongs to another user (no ID leak)
+
+## Workflow
+
+State machine: `draft → submitted → under_review → approved`, with
+`under_review → rejected` and `under_review → changes_requested → draft`
+(the last hop happens automatically on the next edit/version, decision 4).
+
+### `POST /api/documents/{id}/submit/`
+- Auth: owner (creator) or admin; only from `draft`
+- Notifies all active reviewers
+
+### `POST /api/documents/{id}/review/`
+- Auth: reviewer or admin; only from `submitted`
+
+### `POST /api/documents/{id}/approve/`
+- Auth: reviewer or admin (never the creator, even the document's own creator); only from `under_review`
+- Notifies the creator
+
+### `POST /api/documents/{id}/reject/`
+- Auth: reviewer or admin; only from `under_review`
+- Body: `reason` (required, non-blank) — stored as a `Comment`
+- Notifies the creator
+
+### `POST /api/documents/{id}/request-changes/`
+- Auth: reviewer or admin; only from `under_review`
+- Body: `comment` (required, non-blank) — stored as a `Comment`
+- Notifies the creator
+
+All five endpoints: 400 on illegal transition or missing reason/comment,
+403 on wrong role, 404 if the document is outside the caller's visible
+queryset. Each runs inside `transaction.atomic()` with
+`select_for_update()` on the document row.
