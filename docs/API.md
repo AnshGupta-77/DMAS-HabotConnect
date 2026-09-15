@@ -118,3 +118,21 @@ queryset. Each runs inside `transaction.atomic()` with
 
 ### `GET /api/documents/{id}/activity/`
 - Auth: required, same object-access rules; paginated, newest first
+
+## Versions
+
+### `POST /api/documents/{id}/versions/`
+- Auth: owner (creator) or admin
+- Body (multipart): `file` (required), `comment` (optional)
+- Allowed while `draft`/`changes_requested`/`approved`/`rejected`; 400 while `submitted`/`under_review`
+- Creates version N+1, updates `document.file`/`current_version`, sets status back to `draft`
+- Old version file records are kept, never overwritten
+
+### `GET /api/documents/{id}/versions/`
+- Auth: same as document access; paginated
+
+### `GET /api/documents/{id}/versions/{version_id}/`
+- Auth: same as document access; 404 if the version does not belong to `{id}`
+
+### `GET /api/documents/{id}/versions/{version_id}/download/`
+- Auth: same as document access; `FileResponse`, no filesystem path in the JSON body

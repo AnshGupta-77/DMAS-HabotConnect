@@ -2,7 +2,7 @@ from django.http import FileResponse
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, mixins, permissions, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 from rest_framework.response import Response
 
 from users.models import User
@@ -10,11 +10,16 @@ from users.models import User
 from .filters import DocumentFilterSet
 from .models import ActivityLog, Document
 from .permissions import DocumentObjectPermission
-from .serializers import ActivityLogSerializer, CommentSerializer, DocumentSerializer
-from .services import apply_transition, log_activity
+from .serializers import (
+    ActivityLogSerializer,
+    CommentSerializer,
+    DocumentSerializer,
+    DocumentVersionSerializer,
+)
+from .services import apply_transition, create_version, log_activity
 
 WORKFLOW_ACTIONS = {"submit", "review", "approve", "reject", "request_changes"}
-NESTED_READ_ACTIONS = {"comments", "activity"}
+NESTED_READ_ACTIONS = {"comments", "activity", "versions", "version_detail", "version_download"}
 
 
 class DocumentViewSet(
@@ -152,3 +157,46 @@ class DocumentViewSet(
         page = self.paginate_queryset(queryset)
         serializer = ActivityLogSerializer(page, many=True)
         return self.get_paginated_response(serializer.data)
+
+    @action(detail=True, methods=["get", "post"])
+    def versions(self, request, pk=None):
+        document = self.get_object()
+        if request.method == "POST":
+            serializer = DocumentVersionSerializer(data=request.data, context={"request": request})
+            serializer.is_valid(raise_exception=True)
+            version = create_version(
+                document_id=document.id,
+                user=request.user,
+                file=serializer.validated_data["file"],
+                comment_text=serializer.validated_data.get("comment", ""),
+            )
+            out = DocumentVersionSerializer(version, context={"request": request})
+            return Response(out.data, status=status.HTTP_201_CREATED)
+
+        queryset = document.versions.select_related("created_by")
+        page = self.paginate_queryset(queryset)
+        serializer = DocumentVersionSerializer(page, many=True, context={"request": request})
+        return self.get_paginated_response(serializer.data)
+
+    @action(detail=True, methods=["get"], url_path=r"versions/(?P<version_id>[^/.]+)")
+    def version_detail(self, request, pk=None, version_id=None):
+        document = self.get_object()
+        version = document.versions.select_related("created_by").filter(id=version_id).first()
+        if version is None:
+            raise NotFound("Version not found.")
+        return Response(DocumentVersionSerializer(version, context={"request": request}).data)
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path=r"versions/(?P<version_id>[^/.]+)/download",
+        url_name="version-download",
+    )
+    def version_download(self, request, pk=None, version_id=None):
+        document = self.get_object()
+        version = document.versions.filter(id=version_id).first()
+        if version is None:
+            raise NotFound("Version not found.")
+        return FileResponse(
+            version.file.open("rb"), as_attachment=True, filename=version.file.name.rsplit("/", 1)[-1]
+        )

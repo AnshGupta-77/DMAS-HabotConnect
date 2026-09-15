@@ -89,3 +89,31 @@ def apply_transition(*, action_name, document_id, user, comment_text=""):
         notify([document.created_by], "Changes have been requested for your document.")
 
     return document
+
+
+@transaction.atomic
+def create_version(*, document_id, user, file, comment_text=""):
+    document = Document.objects.select_for_update().get(id=document_id)
+
+    if user.role != User.Role.ADMIN and document.created_by_id != user.id:
+        raise PermissionDenied("You do not have permission to version this document.")
+    if document.status in (Document.Status.SUBMITTED, Document.Status.UNDER_REVIEW):
+        raise ValidationError("Cannot create a new version while the document is under review.")
+
+    next_number = document.current_version + 1
+    version = document.versions.create(
+        version_number=next_number, file=file, created_by=user, comment=comment_text.strip()
+    )
+
+    document.file = file
+    document.current_version = next_number
+    document.status = Document.Status.DRAFT
+    document.save(update_fields=["file", "current_version", "status", "updated_at"])
+
+    log_activity(
+        document=document,
+        user=user,
+        action=ActivityLog.Action.VERSION_CREATED,
+        description=f"Version {next_number} created.",
+    )
+    return version

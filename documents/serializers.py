@@ -2,7 +2,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from django.urls import reverse
 from rest_framework import serializers
 
-from .models import ActivityLog, Category, Comment, Document
+from .models import ActivityLog, Category, Comment, Document, DocumentVersion
 from .validators import validate_document_file
 
 
@@ -70,6 +70,41 @@ class CommentSerializer(serializers.ModelSerializer):
     def validate_comment(self, value):
         if not value.strip():
             raise serializers.ValidationError("Comment cannot be empty.")
+        return value
+
+
+class DocumentVersionSerializer(serializers.ModelSerializer):
+    created_by_username = serializers.CharField(source="created_by.username", read_only=True)
+    download_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = DocumentVersion
+        fields = [
+            "id",
+            "document",
+            "version_number",
+            "file",
+            "download_url",
+            "created_by",
+            "created_by_username",
+            "comment",
+            "created_at",
+        ]
+        read_only_fields = ["document", "version_number", "created_by", "created_at"]
+        extra_kwargs = {"file": {"write_only": True}}
+
+    def get_download_url(self, obj):
+        request = self.context.get("request")
+        url = reverse(
+            "document-version-download", kwargs={"pk": obj.document_id, "version_id": obj.id}
+        )
+        return request.build_absolute_uri(url) if request else url
+
+    def validate_file(self, value):
+        try:
+            validate_document_file(value)
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(exc.messages) from exc
         return value
 
 

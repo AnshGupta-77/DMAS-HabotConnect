@@ -26,3 +26,7 @@ Columns: Endpoint | Method | Auth | Roles | Object Access | Valid Input | Invali
 | /api/documents/{id}/comments/ | POST | required | any with doc access | 404 outside scope | ok | empty/whitespace | 201 | 400/404 | impersonation ignored | n/a | test_comments_activity.py | API.md | phase6 |
 | /api/documents/{id}/comments/ | GET | required | any with doc access | 404 outside scope | ok | n/a | 200 | 404 | n/a | paginated | test_comments_activity.py | API.md | phase6 |
 | /api/documents/{id}/activity/ | GET | required | any with doc access | 404 outside scope | ok | n/a | 200 | 404 | n/a | select_related, paginated | test_comments_activity.py | API.md | phase6 |
+| /api/documents/{id}/versions/ | POST | required | owner, admin | 404 outside scope | ok | invalid file, under-review blocked | 201 | 400/404 | non-owner blocked | select_for_update | test_versions.py | API.md | phase7 |
+| /api/documents/{id}/versions/ | GET | required | any with doc access | 404 outside scope | ok | n/a | 200 | 404 | n/a | select_related, paginated | test_versions.py | API.md | phase7 |
+| /api/documents/{id}/versions/{version_id}/ | GET | required | any with doc access | 404 wrong parent doc | ok | n/a | 200 | 404 | version scoped to parent doc | n/a | test_versions.py | API.md | phase7 |
+| /api/documents/{id}/versions/{version_id}/download/ | GET | required | any with doc access | 404 wrong parent doc | ok | n/a | 200 | 404 | n/a | n/a | test_versions.py | API.md | phase7 |
