@@ -136,3 +136,11 @@ queryset. Each runs inside `transaction.atomic()` with
 
 ### `GET /api/documents/{id}/versions/{version_id}/download/`
 - Auth: same as document access; `FileResponse`, no filesystem path in the JSON body
+
+## Dashboard
+
+### `GET /api/dashboard/`
+- Auth: required. Counts computed over the caller's visible queryset (decision 10):
+  admin = all documents, creator = own documents, reviewer = non-draft documents.
+- 200: `{total_documents, draft_documents, submitted_documents, pending_reviews, approved_documents, rejected_documents}`
+- Single `aggregate(Count(filter=Q(...)))` query (2 queries total incl. auth lookup)

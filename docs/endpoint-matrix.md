@@ -30,3 +30,4 @@ Columns: Endpoint | Method | Auth | Roles | Object Access | Valid Input | Invali
 | /api/documents/{id}/versions/ | GET | required | any with doc access | 404 outside scope | ok | n/a | 200 | 404 | n/a | select_related, paginated | test_versions.py | API.md | phase7 |
 | /api/documents/{id}/versions/{version_id}/ | GET | required | any with doc access | 404 wrong parent doc | ok | n/a | 200 | 404 | version scoped to parent doc | n/a | test_versions.py | API.md | phase7 |
 | /api/documents/{id}/versions/{version_id}/download/ | GET | required | any with doc access | 404 wrong parent doc | ok | n/a | 200 | 404 | n/a | n/a | test_versions.py | API.md | phase7 |
+| /api/dashboard/ | GET | required | any | role-scoped counts | ok | n/a | 200 | 401 | role scoping verified | assertNumQueries(2), single aggregate | test_dashboard.py | API.md | phase8 |
