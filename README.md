@@ -14,7 +14,7 @@ Python 3.14, Django 6.1, Django REST Framework, PostgreSQL, JWT auth
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements-dev.txt
+pip install -r requirements.txt
 
 cp .env.example .env   # edit values for your machine
 
@@ -38,7 +38,6 @@ python manage.py runserver
 
 ```bash
 python manage.py test        # 83 tests
-ruff check .
 python manage.py makemigrations --check --dry-run
 ```
 
